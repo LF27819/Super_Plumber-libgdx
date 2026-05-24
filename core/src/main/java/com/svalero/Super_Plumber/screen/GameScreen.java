@@ -18,6 +18,12 @@ public class GameScreen implements Screen {
     private Texture marioTexture;
     private Texture groundBlockTexture;
 
+    private Texture bushTexture;
+    private Texture smallMountainTexture;
+    private Texture mountainTexture;
+    private Texture cloudTexture;
+    private Texture smallCloudTexture;
+
     private float marioX;
     private float marioY;
     private float marioWidth;
@@ -46,6 +52,12 @@ public class GameScreen implements Screen {
 
         marioTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha.png"));
         groundBlockTexture = new Texture(Gdx.files.internal("assets/sprites/tiles/bloque-ladrillo.png"));
+
+        bushTexture = new Texture(Gdx.files.internal("assets/sprites/background/arbusto.png"));
+        smallMountainTexture = new Texture(Gdx.files.internal("assets/sprites/background/montanapeq.png"));
+        mountainTexture = new Texture(Gdx.files.internal("assets/sprites/background/montana.png"));
+        cloudTexture = new Texture(Gdx.files.internal("assets/sprites/background/nube.png"));
+        smallCloudTexture = new Texture(Gdx.files.internal("assets/sprites/background/nubepeq.png"));
 
         marioWidth = 64;
         marioHeight = 64;
@@ -81,12 +93,32 @@ public class GameScreen implements Screen {
 
         batch.begin();
 
+        drawBackground();
         drawGround();
         drawPlatform();
 
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
         batch.end();
+    }
+
+    private void drawBackground() {
+
+        // NUBES
+        batch.draw(cloudTexture, 90, 360, 70, 50);
+        batch.draw(smallCloudTexture, 300, 400, 90, 45);
+        batch.draw(cloudTexture, 610, 370, 70, 50);
+        batch.draw(smallCloudTexture, 820, 410, 90, 45);
+
+        // MONTAÑAS
+        batch.draw(mountainTexture, 30, blockSize, 140, 90);
+        batch.draw(smallMountainTexture, 390, blockSize, 100, 70);
+        batch.draw(mountainTexture, 690, blockSize, 140, 90);
+
+        // ARBUSTOS
+        batch.draw(bushTexture, 210, blockSize, 100, 40);
+        batch.draw(bushTexture, 560, blockSize, 100, 40);
+        batch.draw(bushTexture, 900, blockSize, 100, 40);
     }
 
     private void drawGround() {
@@ -150,7 +182,14 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         if (batch != null) batch.dispose();
+
         if (marioTexture != null) marioTexture.dispose();
         if (groundBlockTexture != null) groundBlockTexture.dispose();
+
+        if (bushTexture != null) bushTexture.dispose();
+        if (smallMountainTexture != null) smallMountainTexture.dispose();
+        if (mountainTexture != null) mountainTexture.dispose();
+        if (cloudTexture != null) cloudTexture.dispose();
+        if (smallCloudTexture != null) smallCloudTexture.dispose();
     }
 }
