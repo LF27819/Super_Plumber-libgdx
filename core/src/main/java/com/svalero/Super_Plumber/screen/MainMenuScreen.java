@@ -17,7 +17,6 @@ public class MainMenuScreen implements Screen {
     private SpriteBatch batch;
     private BitmapFont font;
     private GlyphLayout layout;
-
     private Texture logoTexture;
 
     public MainMenuScreen(Super_Plumber game) {
@@ -26,7 +25,6 @@ public class MainMenuScreen implements Screen {
 
     @Override
     public void show() {
-
         batch = new SpriteBatch();
 
         font = new BitmapFont();
@@ -34,66 +32,48 @@ public class MainMenuScreen implements Screen {
 
         layout = new GlyphLayout();
 
-        logoTexture = new Texture(
-            Gdx.files.internal("assets/sprites/ui/logo.png")
-        );
+        logoTexture = new Texture(Gdx.files.internal("assets/sprites/ui/logo.png"));
     }
 
     @Override
     public void render(float delta) {
-
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             game.setScreen(new GameScreen(game));
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
             Gdx.app.exit();
         }
 
         Gdx.gl.glClearColor(0.35f, 0.65f, 1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        batch.begin();
-
         float logoWidth = 500;
         float logoHeight = 220;
-
         float logoX = (Gdx.graphics.getWidth() - logoWidth) / 2f;
 
+        batch.begin();
         batch.draw(logoTexture, logoX, 240, logoWidth, logoHeight);
-
         drawCenteredText("PULSA ENTER PARA JUGAR", 210);
-
-        drawCenteredText("PULSA ESC PARA SALIR", 170);
-
+        drawCenteredText("PULSA Q PARA SALIR", 170);
         batch.end();
     }
 
     private void drawCenteredText(String text, float y) {
-
         layout.setText(font, text);
-
         float x = (Gdx.graphics.getWidth() - layout.width) / 2f;
-
         font.draw(batch, text, x, y);
     }
 
     @Override public void resize(int width, int height) {}
     @Override public void pause() {}
     @Override public void resume() {}
-
-    @Override
-    public void hide() {
-        dispose();
-    }
+    @Override public void hide() {}
 
     @Override
     public void dispose() {
-
         if (batch != null) batch.dispose();
-
         if (font != null) font.dispose();
-
         if (logoTexture != null) logoTexture.dispose();
     }
 }
