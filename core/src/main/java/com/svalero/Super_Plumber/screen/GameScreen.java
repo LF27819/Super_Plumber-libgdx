@@ -50,14 +50,12 @@ public class GameScreen implements Screen {
     private boolean isOnGround;
 
     private Rectangle marioBounds;
-    private Rectangle ground;
 
+    private Array<Rectangle> terrainCollisions;
     private Array<Coin> coinsList;
     private Array<Enemy> enemiesList;
 
     private int coins;
-
-    private final int blockSize = 48;
 
     public GameScreen(Super_Plumber game) {
         this.game = game;
@@ -85,7 +83,7 @@ public class GameScreen implements Screen {
         marioHeight = 64;
 
         marioX = 100;
-        marioY = 150;
+        marioY = 220;
 
         speed = 250;
         verticalSpeed = 0;
@@ -95,12 +93,13 @@ public class GameScreen implements Screen {
         isOnGround = false;
 
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
-        ground = new Rectangle(0, 0, 5000, blockSize);
 
         coins = 0;
         coinsList = new Array<>();
         enemiesList = new Array<>();
+        terrainCollisions = new Array<>();
 
+        loadTerrainCollisionsFromTiled();
         loadCoinsFromTiled();
         loadEnemiesFromTiled();
         prepareVisibleLayers();
@@ -118,10 +117,8 @@ public class GameScreen implements Screen {
         checkCollisions();
         checkCoinCollision();
         checkEnemyCollision();
-
-        camara.position.x = marioX + marioWidth / 2;
-        camara.position.y = Gdx.graphics.getHeight() / 2f;
-        camara.update();
+        checkPlayerFall();
+        updateCamera();
 
         Gdx.gl.glClearColor(0.35f, 0.65f, 1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -134,6 +131,7 @@ public class GameScreen implements Screen {
 
         drawCoins();
         drawEnemies();
+
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
         font.draw(
@@ -144,6 +142,38 @@ public class GameScreen implements Screen {
         );
 
         batch.end();
+    }
+
+    private void loadTerrainCollisionsFromTiled() {
+        TiledMapTileLayer terrainLayer = (TiledMapTileLayer) mapa.getLayers().get("terrain");
+
+        if (terrainLayer == null) {
+            System.out.println("No existe la capa terrain en Tiled");
+            return;
+        }
+
+        float tileWidth = terrainLayer.getTileWidth();
+        float tileHeight = terrainLayer.getTileHeight();
+
+        for (int x = 0; x < terrainLayer.getWidth(); x++) {
+            for (int y = 0; y < terrainLayer.getHeight(); y++) {
+                TiledMapTileLayer.Cell cell = terrainLayer.getCell(x, y);
+
+                if (cell != null) {
+                    TiledMapTile tile = cell.getTile();
+
+                    float collisionWidth = tile.getTextureRegion().getRegionWidth();
+                    float collisionHeight = tile.getTextureRegion().getRegionHeight();
+
+                    terrainCollisions.add(new Rectangle(
+                        x * tileWidth,
+                        y * tileHeight,
+                        collisionWidth,
+                        collisionHeight
+                    ));
+                }
+            }
+        }
     }
 
     private void loadCoinsFromTiled() {
@@ -174,38 +204,37 @@ public class GameScreen implements Screen {
     }
 
     private void loadEnemiesFromTiled() {
-        TiledMapTileLayer enemiesLayer = (TiledMapTileLayer) mapa.getLayers().get("enemies");
 
-        if (enemiesLayer == null) {
-            System.out.println("No existe la capa enemies en Tiled");
-            return;
-        }
+        com.badlogic.gdx.maps.MapObjects objects =
+            mapa.getLayers().get("enemies_objects").getObjects();
 
-        float tileWidth = enemiesLayer.getTileWidth();
-        float tileHeight = enemiesLayer.getTileHeight();
+        for (com.badlogic.gdx.maps.MapObject object : objects) {
 
-        for (int x = 0; x < enemiesLayer.getWidth(); x++) {
-            for (int y = 0; y < enemiesLayer.getHeight(); y++) {
-                TiledMapTileLayer.Cell cell = enemiesLayer.getCell(x, y);
+            Rectangle rectangle =
+                ((com.badlogic.gdx.maps.objects.RectangleMapObject) object)
+                    .getRectangle();
 
-                if (cell != null) {
-                    TiledMapTile tile = cell.getTile();
+            String type = object.getProperties().get("type", String.class);
 
-                    String type = tile.getProperties().get("type", String.class);
-
-                    if (type == null || type.isBlank()) {
-                        type = "goomba";
-                    }
-
-                    enemiesList.add(new Enemy(
-                        x * tileWidth,
-                        y * tileHeight,
-                        tileWidth,
-                        tileHeight,
-                        type
-                    ));
-                }
+            if (type == null || type.isBlank()) {
+                type = "goomba";
             }
+
+            float enemyWidth = 32;
+            float enemyHeight = 32;
+
+            if (type.equals("ninji")) {
+                enemyWidth = 32;
+                enemyHeight = 32;
+            }
+
+            enemiesList.add(new Enemy(
+                rectangle.x,
+                rectangle.y,
+                enemyWidth,
+                enemyHeight,
+                type
+            ));
         }
     }
 
@@ -227,6 +256,19 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void updateCamera() {
+        float cameraX = marioX + marioWidth / 2;
+        float halfViewport = camara.viewportWidth / 2;
+
+        if (cameraX < halfViewport) {
+            cameraX = halfViewport;
+        }
+
+        camara.position.x = cameraX;
+        camara.position.y = Gdx.graphics.getHeight() / 2f;
+        camara.update();
+    }
+
     private void drawCoins() {
         for (Coin coin : coinsList) {
             if (!coin.isCollected()) {
@@ -238,7 +280,7 @@ public class GameScreen implements Screen {
 
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemiesList) {
-            enemy.update(delta);
+            enemy.update(delta, terrainCollisions);
         }
     }
 
@@ -278,7 +320,9 @@ public class GameScreen implements Screen {
     }
 
     private void checkCollisions() {
-        checkPlatformCollision(ground);
+        for (Rectangle terrain : terrainCollisions) {
+            checkPlatformCollision(terrain);
+        }
     }
 
     private void checkPlatformCollision(Rectangle rectangle) {
@@ -306,12 +350,22 @@ public class GameScreen implements Screen {
     private void checkEnemyCollision() {
         for (Enemy enemy : enemiesList) {
             if (marioBounds.overlaps(enemy.getBounds())) {
-                marioX = 100;
-                marioY = 150;
-                verticalSpeed = 0;
-                marioBounds.setPosition(marioX, marioY);
+                resetPlayer();
             }
         }
+    }
+
+    private void checkPlayerFall() {
+        if (marioY < -200) {
+            resetPlayer();
+        }
+    }
+
+    private void resetPlayer() {
+        marioX = 100;
+        marioY = 220;
+        verticalSpeed = 0;
+        marioBounds.setPosition(marioX, marioY);
     }
 
     @Override
