@@ -36,6 +36,7 @@ public class GameScreen implements Screen {
     private Texture coinTexture;
     private Texture goombaTexture;
     private Texture ninjiTexture;
+    private Texture goombaDeadTexture;
 
     private float marioX;
     private float marioY;
@@ -77,6 +78,7 @@ public class GameScreen implements Screen {
         marioTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha.png"));
         coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
         goombaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/enemigo-seta.png"));
+        goombaDeadTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/goomba-aplastado.png"));
         ninjiTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/ninji-izda.png"));
 
         marioWidth = 64;
@@ -286,10 +288,16 @@ public class GameScreen implements Screen {
 
     private void drawEnemies() {
         for (Enemy enemy : enemiesList) {
+            if (!enemy.isAlive()) {
+                continue;
+            }
+
             Rectangle bounds = enemy.getBounds();
 
             if (enemy.getType().equals("ninji")) {
                 batch.draw(ninjiTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            } else if (enemy.isDying()) {
+                batch.draw(goombaDeadTexture, bounds.x, bounds.y, bounds.width, bounds.height);
             } else {
                 batch.draw(goombaTexture, bounds.x, bounds.y, bounds.width, bounds.height);
             }
@@ -349,8 +357,21 @@ public class GameScreen implements Screen {
 
     private void checkEnemyCollision() {
         for (Enemy enemy : enemiesList) {
+            if (!enemy.isAlive() || enemy.isDying()) {
+                continue;
+            }
+
             if (marioBounds.overlaps(enemy.getBounds())) {
-                resetPlayer();
+                boolean isFalling = verticalSpeed < 0;
+                boolean isGoomba = enemy.getType().equals("goomba");
+                boolean marioAboveEnemy = marioY > enemy.getBounds().y + enemy.getBounds().height / 2;
+
+                if (isGoomba && isFalling && marioAboveEnemy) {
+                    enemy.die();
+                    verticalSpeed = jumpForce / 2;
+                } else {
+                    resetPlayer();
+                }
             }
         }
     }
@@ -385,6 +406,7 @@ public class GameScreen implements Screen {
         if (marioTexture != null) marioTexture.dispose();
         if (coinTexture != null) coinTexture.dispose();
         if (goombaTexture != null) goombaTexture.dispose();
+        if (goombaDeadTexture != null) goombaDeadTexture.dispose();
         if (ninjiTexture != null) ninjiTexture.dispose();
 
         if (mapa != null) mapa.dispose();
