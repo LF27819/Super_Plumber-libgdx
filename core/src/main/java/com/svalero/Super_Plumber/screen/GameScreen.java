@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
@@ -17,6 +18,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.svalero.Super_Plumber.Super_Plumber;
 import com.svalero.Super_Plumber.domain.Coin;
+import com.svalero.Super_Plumber.domain.Enemy;
 
 public class GameScreen implements Screen {
 
@@ -32,6 +34,8 @@ public class GameScreen implements Screen {
 
     private Texture marioTexture;
     private Texture coinTexture;
+    private Texture goombaTexture;
+    private Texture ninjiTexture;
 
     private float marioX;
     private float marioY;
@@ -49,6 +53,8 @@ public class GameScreen implements Screen {
     private Rectangle ground;
 
     private Array<Coin> coinsList;
+    private Array<Enemy> enemiesList;
+
     private int coins;
 
     private final int blockSize = 48;
@@ -72,6 +78,8 @@ public class GameScreen implements Screen {
 
         marioTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha.png"));
         coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
+        goombaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/enemigo-seta.png"));
+        ninjiTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/ninji-izda.png"));
 
         marioWidth = 64;
         marioHeight = 64;
@@ -87,13 +95,14 @@ public class GameScreen implements Screen {
         isOnGround = false;
 
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
-
         ground = new Rectangle(0, 0, 5000, blockSize);
 
         coins = 0;
         coinsList = new Array<>();
+        enemiesList = new Array<>();
 
         loadCoinsFromTiled();
+        loadEnemiesFromTiled();
         prepareVisibleLayers();
     }
 
@@ -105,8 +114,10 @@ public class GameScreen implements Screen {
 
         handleInput(delta);
         applyGravity(delta);
+        updateEnemies(delta);
         checkCollisions();
         checkCoinCollision();
+        checkEnemyCollision();
 
         camara.position.x = marioX + marioWidth / 2;
         camara.position.y = Gdx.graphics.getHeight() / 2f;
@@ -122,7 +133,7 @@ public class GameScreen implements Screen {
         batch.begin();
 
         drawCoins();
-
+        drawEnemies();
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
         font.draw(
@@ -162,13 +173,49 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void loadEnemiesFromTiled() {
+        TiledMapTileLayer enemiesLayer = (TiledMapTileLayer) mapa.getLayers().get("enemies");
+
+        if (enemiesLayer == null) {
+            System.out.println("No existe la capa enemies en Tiled");
+            return;
+        }
+
+        float tileWidth = enemiesLayer.getTileWidth();
+        float tileHeight = enemiesLayer.getTileHeight();
+
+        for (int x = 0; x < enemiesLayer.getWidth(); x++) {
+            for (int y = 0; y < enemiesLayer.getHeight(); y++) {
+                TiledMapTileLayer.Cell cell = enemiesLayer.getCell(x, y);
+
+                if (cell != null) {
+                    TiledMapTile tile = cell.getTile();
+
+                    String type = tile.getProperties().get("type", String.class);
+
+                    if (type == null || type.isBlank()) {
+                        type = "goomba";
+                    }
+
+                    enemiesList.add(new Enemy(
+                        x * tileWidth,
+                        y * tileHeight,
+                        tileWidth,
+                        tileHeight,
+                        type
+                    ));
+                }
+            }
+        }
+    }
+
     private void prepareVisibleLayers() {
         Array<Integer> visibleLayers = new Array<>();
 
         for (int i = 0; i < mapa.getLayers().getCount(); i++) {
             MapLayer layer = mapa.getLayers().get(i);
 
-            if (!layer.getName().equals("coins")) {
+            if (!layer.getName().equals("coins") && !layer.getName().equals("enemies")) {
                 visibleLayers.add(i);
             }
         }
@@ -185,6 +232,24 @@ public class GameScreen implements Screen {
             if (!coin.isCollected()) {
                 Rectangle bounds = coin.getBounds();
                 batch.draw(coinTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        }
+    }
+
+    private void updateEnemies(float delta) {
+        for (Enemy enemy : enemiesList) {
+            enemy.update(delta);
+        }
+    }
+
+    private void drawEnemies() {
+        for (Enemy enemy : enemiesList) {
+            Rectangle bounds = enemy.getBounds();
+
+            if (enemy.getType().equals("ninji")) {
+                batch.draw(ninjiTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            } else {
+                batch.draw(goombaTexture, bounds.x, bounds.y, bounds.width, bounds.height);
             }
         }
     }
@@ -238,6 +303,17 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void checkEnemyCollision() {
+        for (Enemy enemy : enemiesList) {
+            if (marioBounds.overlaps(enemy.getBounds())) {
+                marioX = 100;
+                marioY = 150;
+                verticalSpeed = 0;
+                marioBounds.setPosition(marioX, marioY);
+            }
+        }
+    }
+
     @Override
     public void resize(int width, int height) {
         camara.setToOrtho(false, width, height);
@@ -254,6 +330,8 @@ public class GameScreen implements Screen {
 
         if (marioTexture != null) marioTexture.dispose();
         if (coinTexture != null) coinTexture.dispose();
+        if (goombaTexture != null) goombaTexture.dispose();
+        if (ninjiTexture != null) ninjiTexture.dispose();
 
         if (mapa != null) mapa.dispose();
         if (rendererMapa != null) rendererMapa.dispose();
