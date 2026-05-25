@@ -8,11 +8,15 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
 import com.svalero.Super_Plumber.Super_Plumber;
+import com.svalero.Super_Plumber.domain.Coin;
 
 public class GameScreen implements Screen {
 
@@ -24,6 +28,7 @@ public class GameScreen implements Screen {
     private OrthographicCamera camara;
     private TiledMap mapa;
     private OrthogonalTiledMapRenderer rendererMapa;
+    private int[] capasVisibles;
 
     private Texture marioTexture;
     private Texture coinTexture;
@@ -43,8 +48,7 @@ public class GameScreen implements Screen {
     private Rectangle marioBounds;
     private Rectangle ground;
 
-    private Rectangle coinBounds;
-    private boolean coinCollected;
+    private Array<Coin> coinsList;
     private int coins;
 
     private final int blockSize = 48;
@@ -56,6 +60,7 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+
         font = new BitmapFont();
         font.getData().setScale(2);
 
@@ -83,13 +88,13 @@ public class GameScreen implements Screen {
 
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
 
-        // Suelo temporal antiguo, solo para que Mario no caiga.
-        // Luego lo cambiaremos por colisiones reales desde Tiled.
         ground = new Rectangle(0, 0, 5000, blockSize);
 
-        coinBounds = new Rectangle(360, 200, 32, 32);
-        coinCollected = false;
         coins = 0;
+        coinsList = new Array<>();
+
+        loadCoinsFromTiled();
+        prepareVisibleLayers();
     }
 
     @Override
@@ -111,14 +116,12 @@ public class GameScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         rendererMapa.setView(camara);
-        rendererMapa.render();
+        rendererMapa.render(capasVisibles);
 
         batch.setProjectionMatrix(camara.combined);
         batch.begin();
 
-        if (!coinCollected) {
-            batch.draw(coinTexture, coinBounds.x, coinBounds.y, coinBounds.width, coinBounds.height);
-        }
+        drawCoins();
 
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
@@ -130,6 +133,60 @@ public class GameScreen implements Screen {
         );
 
         batch.end();
+    }
+
+    private void loadCoinsFromTiled() {
+        TiledMapTileLayer coinsLayer = (TiledMapTileLayer) mapa.getLayers().get("coins");
+
+        if (coinsLayer == null) {
+            System.out.println("No existe la capa coins en Tiled");
+            return;
+        }
+
+        float tileWidth = coinsLayer.getTileWidth();
+        float tileHeight = coinsLayer.getTileHeight();
+
+        for (int x = 0; x < coinsLayer.getWidth(); x++) {
+            for (int y = 0; y < coinsLayer.getHeight(); y++) {
+                TiledMapTileLayer.Cell cell = coinsLayer.getCell(x, y);
+
+                if (cell != null) {
+                    coinsList.add(new Coin(
+                        x * tileWidth,
+                        y * tileHeight,
+                        tileWidth,
+                        tileHeight
+                    ));
+                }
+            }
+        }
+    }
+
+    private void prepareVisibleLayers() {
+        Array<Integer> visibleLayers = new Array<>();
+
+        for (int i = 0; i < mapa.getLayers().getCount(); i++) {
+            MapLayer layer = mapa.getLayers().get(i);
+
+            if (!layer.getName().equals("coins")) {
+                visibleLayers.add(i);
+            }
+        }
+
+        capasVisibles = new int[visibleLayers.size];
+
+        for (int i = 0; i < visibleLayers.size; i++) {
+            capasVisibles[i] = visibleLayers.get(i);
+        }
+    }
+
+    private void drawCoins() {
+        for (Coin coin : coinsList) {
+            if (!coin.isCollected()) {
+                Rectangle bounds = coin.getBounds();
+                batch.draw(coinTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        }
     }
 
     private void handleInput(float delta) {
@@ -173,9 +230,11 @@ public class GameScreen implements Screen {
     }
 
     private void checkCoinCollision() {
-        if (!coinCollected && marioBounds.overlaps(coinBounds)) {
-            coinCollected = true;
-            coins++;
+        for (Coin coin : coinsList) {
+            if (!coin.isCollected() && marioBounds.overlaps(coin.getBounds())) {
+                coin.setCollected(true);
+                coins++;
+            }
         }
     }
 
@@ -185,9 +244,7 @@ public class GameScreen implements Screen {
     }
 
     @Override public void pause() {}
-
     @Override public void resume() {}
-
     @Override public void hide() {}
 
     @Override
