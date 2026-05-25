@@ -14,6 +14,10 @@ public class Enemy {
     private boolean movingRight;
     private boolean movingUp;
 
+    private boolean alive;
+    private boolean dying;
+    private float deathTimer;
+
     public Enemy(float x, float y, float width, float height, String type) {
         this.bounds = new Rectangle(x, y, width, height);
         this.type = type;
@@ -24,9 +28,27 @@ public class Enemy {
         this.speed = 80;
         this.movingRight = true;
         this.movingUp = true;
+
+        this.alive = true;
+        this.dying = false;
+        this.deathTimer = 0;
     }
 
     public void update(float delta, com.badlogic.gdx.utils.Array<Rectangle> terrainCollisions) {
+        if (!alive) {
+            return;
+        }
+
+        if (dying) {
+            deathTimer += delta;
+
+            if (deathTimer >= 0.4f) {
+                alive = false;
+            }
+
+            return;
+        }
+
         if (type.equals("goomba")) {
             moveHorizontal(delta);
         }
@@ -40,13 +62,13 @@ public class Enemy {
         if (movingRight) {
             bounds.x += speed * delta;
 
-            if (bounds.x >= initialX + 50) {
+            if (bounds.x >= initialX + 25) {
                 movingRight = false;
             }
         } else {
             bounds.x -= speed * delta;
 
-            if (bounds.x <= initialX - 60) {
+            if (bounds.x <= initialX - 25) {
                 movingRight = true;
             }
         }
@@ -68,11 +90,28 @@ public class Enemy {
         }
     }
 
+    public void die() {
+        if (type.equals("goomba")) {
+            dying = true;
+            bounds.height = bounds.height / 2;
+        } else {
+            alive = false;
+        }
+    }
+
     public Rectangle getBounds() {
         return bounds;
     }
 
     public String getType() {
         return type;
+    }
+
+    public boolean isAlive() {
+        return alive;
+    }
+
+    public boolean isDying() {
+        return dying;
     }
 }
