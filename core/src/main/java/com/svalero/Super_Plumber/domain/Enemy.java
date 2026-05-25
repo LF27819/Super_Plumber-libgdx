@@ -26,7 +26,7 @@ public class Enemy {
         this.movingUp = true;
     }
 
-    public void update(float delta) {
+    public void update(float delta, com.badlogic.gdx.utils.Array<Rectangle> terrainCollisions) {
         if (type.equals("goomba")) {
             moveHorizontal(delta);
         }
@@ -40,13 +40,13 @@ public class Enemy {
         if (movingRight) {
             bounds.x += speed * delta;
 
-            if (bounds.x >= initialX + 120) {
+            if (bounds.x >= initialX + 50) {
                 movingRight = false;
             }
         } else {
             bounds.x -= speed * delta;
 
-            if (bounds.x <= initialX - 120) {
+            if (bounds.x <= initialX - 60) {
                 movingRight = true;
             }
         }
