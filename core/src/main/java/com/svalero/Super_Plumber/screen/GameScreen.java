@@ -4,8 +4,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.svalero.Super_Plumber.Super_Plumber;
 
@@ -14,15 +19,14 @@ public class GameScreen implements Screen {
     private final Super_Plumber game;
 
     private SpriteBatch batch;
+    private BitmapFont font;
+
+    private OrthographicCamera camara;
+    private TiledMap mapa;
+    private OrthogonalTiledMapRenderer rendererMapa;
 
     private Texture marioTexture;
-    private Texture groundBlockTexture;
-
-    private Texture bushTexture;
-    private Texture smallMountainTexture;
-    private Texture mountainTexture;
-    private Texture cloudTexture;
-    private Texture smallCloudTexture;
+    private Texture coinTexture;
 
     private float marioX;
     private float marioY;
@@ -38,7 +42,10 @@ public class GameScreen implements Screen {
 
     private Rectangle marioBounds;
     private Rectangle ground;
-    private Rectangle platform;
+
+    private Rectangle coinBounds;
+    private boolean coinCollected;
+    private int coins;
 
     private final int blockSize = 48;
 
@@ -49,15 +56,17 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+        font = new BitmapFont();
+        font.getData().setScale(2);
+
+        camara = new OrthographicCamera();
+        camara.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
+        mapa = new TmxMapLoader().load("levels/nivel1.tmx");
+        rendererMapa = new OrthogonalTiledMapRenderer(mapa);
 
         marioTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha.png"));
-        groundBlockTexture = new Texture(Gdx.files.internal("assets/sprites/tiles/bloque-ladrillo.png"));
-
-        bushTexture = new Texture(Gdx.files.internal("assets/sprites/background/arbusto.png"));
-        smallMountainTexture = new Texture(Gdx.files.internal("assets/sprites/background/montanapeq.png"));
-        mountainTexture = new Texture(Gdx.files.internal("assets/sprites/background/montana.png"));
-        cloudTexture = new Texture(Gdx.files.internal("assets/sprites/background/nube.png"));
-        smallCloudTexture = new Texture(Gdx.files.internal("assets/sprites/background/nubepeq.png"));
+        coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
 
         marioWidth = 64;
         marioHeight = 64;
@@ -74,8 +83,13 @@ public class GameScreen implements Screen {
 
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
 
-        ground = new Rectangle(0, 0, Gdx.graphics.getWidth(), blockSize);
-        platform = new Rectangle(260, 145, blockSize * 5, blockSize);
+        // Suelo temporal antiguo, solo para que Mario no caiga.
+        // Luego lo cambiaremos por colisiones reales desde Tiled.
+        ground = new Rectangle(0, 0, 5000, blockSize);
+
+        coinBounds = new Rectangle(360, 200, 32, 32);
+        coinCollected = false;
+        coins = 0;
     }
 
     @Override
@@ -87,50 +101,35 @@ public class GameScreen implements Screen {
         handleInput(delta);
         applyGravity(delta);
         checkCollisions();
+        checkCoinCollision();
+
+        camara.position.x = marioX + marioWidth / 2;
+        camara.position.y = Gdx.graphics.getHeight() / 2f;
+        camara.update();
 
         Gdx.gl.glClearColor(0.35f, 0.65f, 1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        rendererMapa.setView(camara);
+        rendererMapa.render();
+
+        batch.setProjectionMatrix(camara.combined);
         batch.begin();
 
-        drawBackground();
-        drawGround();
-        drawPlatform();
+        if (!coinCollected) {
+            batch.draw(coinTexture, coinBounds.x, coinBounds.y, coinBounds.width, coinBounds.height);
+        }
 
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
+        font.draw(
+            batch,
+            "MONEDAS: " + coins,
+            camara.position.x - camara.viewportWidth / 2 + 20,
+            camara.position.y + camara.viewportHeight / 2 - 20
+        );
+
         batch.end();
-    }
-
-    private void drawBackground() {
-
-        // NUBES
-        batch.draw(cloudTexture, 90, 360, 70, 50);
-        batch.draw(smallCloudTexture, 300, 400, 90, 45);
-        batch.draw(cloudTexture, 610, 370, 70, 50);
-        batch.draw(smallCloudTexture, 820, 410, 90, 45);
-
-        // MONTAÑAS
-        batch.draw(mountainTexture, 30, blockSize, 140, 90);
-        batch.draw(smallMountainTexture, 390, blockSize, 100, 70);
-        batch.draw(mountainTexture, 690, blockSize, 140, 90);
-
-        // ARBUSTOS
-        batch.draw(bushTexture, 210, blockSize, 100, 40);
-        batch.draw(bushTexture, 560, blockSize, 100, 40);
-        batch.draw(bushTexture, 900, blockSize, 100, 40);
-    }
-
-    private void drawGround() {
-        for (int x = 0; x < Gdx.graphics.getWidth(); x += blockSize) {
-            batch.draw(groundBlockTexture, x, ground.y, blockSize, blockSize);
-        }
-    }
-
-    private void drawPlatform() {
-        for (int x = (int) platform.x; x < platform.x + platform.width; x += blockSize) {
-            batch.draw(groundBlockTexture, x, platform.y, blockSize, blockSize);
-        }
     }
 
     private void handleInput(float delta) {
@@ -158,7 +157,6 @@ public class GameScreen implements Screen {
 
     private void checkCollisions() {
         checkPlatformCollision(ground);
-        checkPlatformCollision(platform);
     }
 
     private void checkPlatformCollision(Rectangle rectangle) {
@@ -174,22 +172,33 @@ public class GameScreen implements Screen {
         }
     }
 
-    @Override public void resize(int width, int height) {}
+    private void checkCoinCollision() {
+        if (!coinCollected && marioBounds.overlaps(coinBounds)) {
+            coinCollected = true;
+            coins++;
+        }
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        camara.setToOrtho(false, width, height);
+    }
+
     @Override public void pause() {}
+
     @Override public void resume() {}
+
     @Override public void hide() {}
 
     @Override
     public void dispose() {
         if (batch != null) batch.dispose();
+        if (font != null) font.dispose();
 
         if (marioTexture != null) marioTexture.dispose();
-        if (groundBlockTexture != null) groundBlockTexture.dispose();
+        if (coinTexture != null) coinTexture.dispose();
 
-        if (bushTexture != null) bushTexture.dispose();
-        if (smallMountainTexture != null) smallMountainTexture.dispose();
-        if (mountainTexture != null) mountainTexture.dispose();
-        if (cloudTexture != null) cloudTexture.dispose();
-        if (smallCloudTexture != null) smallCloudTexture.dispose();
+        if (mapa != null) mapa.dispose();
+        if (rendererMapa != null) rendererMapa.dispose();
     }
 }
