@@ -56,6 +56,10 @@ public class Enemy {
         if (type.equals("ninji")) {
             moveVertical(delta);
         }
+
+        if (type.equals("planta")) {
+            movePlant(delta);
+        }
     }
 
     private void moveHorizontal(float delta) {
@@ -113,5 +117,40 @@ public class Enemy {
 
     public boolean isDying() {
         return dying;
+    }
+
+    private void movePlant(float delta) {
+        float visibleHeight = 56;
+        float pauseTime = 1.0f;
+
+        if (movingUp) {
+            deathTimer += delta;
+
+            if (deathTimer < pauseTime) {
+                return;
+            }
+
+            bounds.y += speed * delta;
+
+            if (bounds.y >= initialY + visibleHeight) {
+                bounds.y = initialY + visibleHeight;
+                movingUp = false;
+                deathTimer = 0;
+            }
+        } else {
+            deathTimer += delta;
+
+            if (deathTimer < pauseTime) {
+                return;
+            }
+
+            bounds.y -= speed * delta;
+
+            if (bounds.y <= initialY) {
+                bounds.y = initialY;
+                movingUp = true;
+                deathTimer = 0;
+            }
+        }
     }
 }
