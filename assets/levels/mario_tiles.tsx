@@ -29,16 +29,25 @@
   <image source="../sprites/items/bloque.png" width="32" height="32"/>
  </tile>
  <tile id="9">
+  <properties>
+   <property name="type" value="star"/>
+  </properties>
   <image source="../sprites/items/estrella.png" width="28" height="32"/>
  </tile>
  <tile id="10">
+  <properties>
+   <property name="type" value="coin"/>
+  </properties>
   <image source="../sprites/items/moneda1.png" width="20" height="30"/>
  </tile>
  <tile id="11">
   <image source="../sprites/items/nube.png" width="32" height="34"/>
  </tile>
  <tile id="12">
-  <image source="../sprites/items/setagrande.png" width="32" height="32"/>
+  <properties>
+   <property name="type" value="mushroom"/>
+  </properties>
+  <image source="../sprites/items/seta.png" width="32" height="32"/>
  </tile>
  <tile id="13">
   <image source="../sprites/tiles/castillopeq.png" width="161" height="172"/>
