@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.12.1" name="mario_tiles" tilewidth="287" tileheight="377" tilecount="28" columns="0">
+<tileset version="1.10" tiledversion="1.12.1" name="mario_tiles" tilewidth="287" tileheight="377" tilecount="32" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
   <image source="../sprites/tiles/bloque-ladrillo.png" width="32" height="32"/>
@@ -90,5 +90,20 @@
    <property name="type" value="ninji"/>
   </properties>
   <image source="../sprites/enemies/ninji-izda.png" width="32" height="32"/>
+ </tile>
+ <tile id="28">
+  <image source="../sprites/items/bloque2.png" width="32" height="35"/>
+ </tile>
+ <tile id="29">
+  <image source="../sprites/items/bloqueusado.png" width="32" height="32"/>
+ </tile>
+ <tile id="30">
+  <image source="../sprites/tiles/tuberiamini.png" width="66" height="74"/>
+ </tile>
+ <tile id="33">
+  <properties>
+   <property name="type" value="planta"/>
+  </properties>
+  <image source="../sprites/enemies/planta.png" width="32" height="67"/>
  </tile>
 </tileset>

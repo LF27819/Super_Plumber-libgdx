@@ -30,13 +30,16 @@ public class GameScreen implements Screen {
     private OrthographicCamera camara;
     private TiledMap mapa;
     private OrthogonalTiledMapRenderer rendererMapa;
-    private int[] capasVisibles;
+
+    private int[] capasMapaBase;
+    private int[] capasForeground;
 
     private Texture marioTexture;
     private Texture coinTexture;
     private Texture goombaTexture;
     private Texture ninjiTexture;
     private Texture goombaDeadTexture;
+    private Texture plantaTexture;
 
     private float marioX;
     private float marioY;
@@ -51,6 +54,7 @@ public class GameScreen implements Screen {
     private boolean isOnGround;
 
     private Rectangle marioBounds;
+    private Rectangle goalBounds;
 
     private Array<Rectangle> terrainCollisions;
     private Array<Coin> coinsList;
@@ -80,6 +84,7 @@ public class GameScreen implements Screen {
         goombaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/enemigo-seta.png"));
         goombaDeadTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/goomba-aplastado.png"));
         ninjiTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/ninji-izda.png"));
+        plantaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/planta.png"));
 
         marioWidth = 64;
         marioHeight = 64;
@@ -104,6 +109,7 @@ public class GameScreen implements Screen {
         loadTerrainCollisionsFromTiled();
         loadCoinsFromTiled();
         loadEnemiesFromTiled();
+        loadGoalFromTiled();
         prepareVisibleLayers();
     }
 
@@ -119,6 +125,7 @@ public class GameScreen implements Screen {
         checkCollisions();
         checkCoinCollision();
         checkEnemyCollision();
+        checkGoalCollision();
         checkPlayerFall();
         updateCamera();
 
@@ -126,13 +133,25 @@ public class GameScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         rendererMapa.setView(camara);
-        rendererMapa.render(capasVisibles);
+
+        // 1. Mapa normal: background, terrain, etc.
+        rendererMapa.render(capasMapaBase);
 
         batch.setProjectionMatrix(camara.combined);
+
+        // 2. Monedas y enemigos, incluida la planta.
         batch.begin();
 
         drawCoins();
         drawEnemies();
+
+        batch.end();
+
+        // 3. Foreground encima de la planta para taparla con la tubería.
+        rendererMapa.render(capasForeground);
+
+        // 4. Mario y HUD encima.
+        batch.begin();
 
         batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
 
@@ -206,9 +225,14 @@ public class GameScreen implements Screen {
     }
 
     private void loadEnemiesFromTiled() {
+        MapLayer enemiesLayer = mapa.getLayers().get("enemies_objects");
 
-        com.badlogic.gdx.maps.MapObjects objects =
-            mapa.getLayers().get("enemies_objects").getObjects();
+        if (enemiesLayer == null) {
+            System.out.println("No existe la capa enemies_objects en este nivel");
+            return;
+        }
+
+        com.badlogic.gdx.maps.MapObjects objects = enemiesLayer.getObjects();
 
         for (com.badlogic.gdx.maps.MapObject object : objects) {
 
@@ -225,11 +249,6 @@ public class GameScreen implements Screen {
             float enemyWidth = 32;
             float enemyHeight = 32;
 
-            if (type.equals("ninji")) {
-                enemyWidth = 32;
-                enemyHeight = 32;
-            }
-
             enemiesList.add(new Enemy(
                 rectangle.x,
                 rectangle.y,
@@ -240,21 +259,64 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void loadGoalFromTiled() {
+        goalBounds = null;
+
+        MapLayer goalLayer = mapa.getLayers().get("goal");
+
+        if (goalLayer == null) {
+            System.out.println("No existe la capa goal en este nivel");
+            return;
+        }
+
+        com.badlogic.gdx.maps.MapObjects objects = goalLayer.getObjects();
+
+        for (com.badlogic.gdx.maps.MapObject object : objects) {
+
+            Rectangle rectangle =
+                ((com.badlogic.gdx.maps.objects.RectangleMapObject) object)
+                    .getRectangle();
+
+            String type = object.getProperties().get("type", String.class);
+
+            if ("finish".equals(type)) {
+                goalBounds = rectangle;
+            }
+        }
+    }
+
     private void prepareVisibleLayers() {
-        Array<Integer> visibleLayers = new Array<>();
+        Array<Integer> baseLayers = new Array<>();
+        Array<Integer> foregroundLayers = new Array<>();
 
         for (int i = 0; i < mapa.getLayers().getCount(); i++) {
             MapLayer layer = mapa.getLayers().get(i);
+            String layerName = layer.getName();
 
-            if (!layer.getName().equals("coins") && !layer.getName().equals("enemies")) {
-                visibleLayers.add(i);
+            if (layerName.equals("coins")
+                || layerName.equals("enemies")
+                || layerName.equals("enemies_objects")
+                || layerName.equals("goal")) {
+                continue;
+            }
+
+            if (layerName.equals("foreground")) {
+                foregroundLayers.add(i);
+            } else {
+                baseLayers.add(i);
             }
         }
 
-        capasVisibles = new int[visibleLayers.size];
+        capasMapaBase = new int[baseLayers.size];
 
-        for (int i = 0; i < visibleLayers.size; i++) {
-            capasVisibles[i] = visibleLayers.get(i);
+        for (int i = 0; i < baseLayers.size; i++) {
+            capasMapaBase[i] = baseLayers.get(i);
+        }
+
+        capasForeground = new int[foregroundLayers.size];
+
+        for (int i = 0; i < foregroundLayers.size; i++) {
+            capasForeground[i] = foregroundLayers.get(i);
         }
     }
 
@@ -294,7 +356,15 @@ public class GameScreen implements Screen {
 
             Rectangle bounds = enemy.getBounds();
 
-            if (enemy.getType().equals("ninji")) {
+            if (enemy.getType().equals("planta")) {
+                float plantWidth = 48;
+                float plantHeight = 64;
+
+                float drawX = bounds.x + (bounds.width - plantWidth) / 2f + 15;
+                float drawY = bounds.y;
+
+                batch.draw(plantaTexture, drawX, drawY, plantWidth, plantHeight);
+            } else if (enemy.getType().equals("ninji")) {
                 batch.draw(ninjiTexture, bounds.x, bounds.y, bounds.width, bounds.height);
             } else if (enemy.isDying()) {
                 batch.draw(goombaDeadTexture, bounds.x, bounds.y, bounds.width, bounds.height);
@@ -382,6 +452,28 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void checkGoalCollision() {
+        if (goalBounds != null && marioBounds.overlaps(goalBounds)) {
+            mapa.dispose();
+            rendererMapa.dispose();
+
+            mapa = new TmxMapLoader().load("levels/nivel2.tmx");
+            rendererMapa = new OrthogonalTiledMapRenderer(mapa);
+
+            terrainCollisions.clear();
+            coinsList.clear();
+            enemiesList.clear();
+
+            loadTerrainCollisionsFromTiled();
+            loadCoinsFromTiled();
+            loadEnemiesFromTiled();
+            loadGoalFromTiled();
+            prepareVisibleLayers();
+
+            resetPlayer();
+        }
+    }
+
     private void resetPlayer() {
         marioX = 100;
         marioY = 220;
@@ -408,6 +500,7 @@ public class GameScreen implements Screen {
         if (goombaTexture != null) goombaTexture.dispose();
         if (goombaDeadTexture != null) goombaDeadTexture.dispose();
         if (ninjiTexture != null) ninjiTexture.dispose();
+        if (plantaTexture != null) plantaTexture.dispose();
 
         if (mapa != null) mapa.dispose();
         if (rendererMapa != null) rendererMapa.dispose();
