@@ -56,6 +56,8 @@ public class GameScreen implements Screen {
     private Texture marioBigJumpRightTexture;
     private Texture marioBigJumpLeftTexture;
 
+    private Texture marioDeadTexture;
+
     private Texture coinTexture;
     private Texture coinBlockTexture;
     private Texture mushroomTexture;
@@ -80,8 +82,10 @@ public class GameScreen implements Screen {
     private boolean isBig;
     private boolean lookingRight;
     private boolean isMoving;
+    private boolean isDead;
 
     private float animationTimer;
+    private float deathTimer;
 
     private Rectangle marioBounds;
     private Rectangle goalBounds;
@@ -136,6 +140,8 @@ public class GameScreen implements Screen {
         marioBigJumpRightTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-salto-gd.png"));
         marioBigJumpLeftTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-salto-gi.png"));
 
+        marioDeadTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-muerto.png"));
+
         coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
         coinBlockTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda2.png"));
         mushroomTexture = new Texture(Gdx.files.internal("assets/sprites/items/setagrande.png"));
@@ -161,7 +167,10 @@ public class GameScreen implements Screen {
         isBig = false;
         lookingRight = true;
         isMoving = false;
+        isDead = false;
+
         animationTimer = 0;
+        deathTimer = 0;
 
         starPower = false;
         starTimer = 0;
@@ -191,17 +200,22 @@ public class GameScreen implements Screen {
 
         animationTimer += delta;
 
-        handleInput(delta);
-        applyGravity(delta);
-        updateEnemies(delta);
-        updateBlockRewards(delta);
-        updateStarPower(delta);
-        checkQuestionBlockCollision();
-        checkCollisions();
-        checkCoinCollision();
-        checkEnemyCollision();
-        checkGoalCollision();
-        checkPlayerFall();
+        if (!isDead) {
+            handleInput(delta);
+            applyGravity(delta);
+            updateEnemies(delta);
+            updateBlockRewards(delta);
+            updateStarPower(delta);
+            checkQuestionBlockCollision();
+            checkCollisions();
+            checkCoinCollision();
+            checkEnemyCollision();
+            checkGoalCollision();
+            checkPlayerFall();
+        } else {
+            updateDeath(delta);
+        }
+
         updateCamera();
 
         Gdx.gl.glClearColor(0.35f, 0.65f, 1f, 1);
@@ -237,6 +251,10 @@ public class GameScreen implements Screen {
     }
 
     private Texture getCurrentMarioTexture() {
+        if (isDead) {
+            return marioDeadTexture;
+        }
+
         if (!isOnGround) {
             if (isBig) {
                 return lookingRight ? marioBigJumpRightTexture : marioBigJumpLeftTexture;
@@ -609,9 +627,52 @@ public class GameScreen implements Screen {
                         continue;
                     }
 
-                    resetPlayer();
+                    damagePlayer();
                 }
             }
+        }
+    }
+
+    private void damagePlayer() {
+        if (isBig) {
+            isBig = false;
+
+            marioWidth = 64;
+            marioHeight = 64;
+
+            marioBounds.setSize(marioWidth, marioHeight);
+
+            verticalSpeed = 250;
+            isMoving = false;
+        } else {
+            diePlayer();
+        }
+    }
+
+    private void diePlayer() {
+        isDead = true;
+        deathTimer = 0;
+        isBig = false;
+        isMoving = false;
+
+        marioWidth = 64;
+        marioHeight = 64;
+        marioBounds.setSize(marioWidth, marioHeight);
+
+        verticalSpeed = 250;
+    }
+
+    private void updateDeath(float delta) {
+        deathTimer += delta;
+
+        verticalSpeed += gravity * delta;
+        marioY += verticalSpeed * delta;
+
+        marioBounds.setPosition(marioX, marioY);
+
+        if (deathTimer >= 1.5f) {
+            isDead = false;
+            resetPlayer();
         }
     }
 
@@ -720,7 +781,7 @@ public class GameScreen implements Screen {
 
     private void checkPlayerFall() {
         if (marioY < -200) {
-            resetPlayer();
+            diePlayer();
         }
     }
 
@@ -753,7 +814,14 @@ public class GameScreen implements Screen {
         marioX = 100;
         marioY = 220;
         verticalSpeed = 0;
+
+        isBig = false;
         isMoving = false;
+        isDead = false;
+
+        marioWidth = 64;
+        marioHeight = 64;
+        marioBounds.setSize(marioWidth, marioHeight);
         marioBounds.setPosition(marioX, marioY);
     }
 
@@ -790,6 +858,8 @@ public class GameScreen implements Screen {
         if (marioBigRunLeftTexture != null) marioBigRunLeftTexture.dispose();
         if (marioBigJumpRightTexture != null) marioBigJumpRightTexture.dispose();
         if (marioBigJumpLeftTexture != null) marioBigJumpLeftTexture.dispose();
+
+        if (marioDeadTexture != null) marioDeadTexture.dispose();
 
         if (coinTexture != null) coinTexture.dispose();
         if (coinBlockTexture != null) coinBlockTexture.dispose();
