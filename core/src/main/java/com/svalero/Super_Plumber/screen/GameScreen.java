@@ -19,6 +19,8 @@ import com.badlogic.gdx.utils.Array;
 import com.svalero.Super_Plumber.Super_Plumber;
 import com.svalero.Super_Plumber.domain.Coin;
 import com.svalero.Super_Plumber.domain.Enemy;
+import com.svalero.Super_Plumber.domain.QuestionBlock;
+import com.svalero.Super_Plumber.domain.BlockReward;
 
 public class GameScreen implements Screen {
 
@@ -41,6 +43,10 @@ public class GameScreen implements Screen {
     private Texture goombaDeadTexture;
     private Texture plantaTexture;
 
+    private Texture marioBigRightTexture;
+    private Texture marioBigLeftTexture;
+    private Texture mushroomTexture;
+
     private float marioX;
     private float marioY;
     private float marioWidth;
@@ -53,6 +59,9 @@ public class GameScreen implements Screen {
 
     private boolean isOnGround;
 
+    private boolean isBig;
+    private boolean lookingRight;
+
     private Rectangle marioBounds;
     private Rectangle goalBounds;
 
@@ -61,6 +70,10 @@ public class GameScreen implements Screen {
     private Array<Enemy> enemiesList;
 
     private int coins;
+
+    private Array<QuestionBlock> questionBlocksList;
+    private Texture coinBlockTexture;
+    private Array<BlockReward> blockRewardsList;
 
     public GameScreen(Super_Plumber game) {
         this.game = game;
@@ -80,7 +93,11 @@ public class GameScreen implements Screen {
         rendererMapa = new OrthogonalTiledMapRenderer(mapa);
 
         marioTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha.png"));
+        marioBigRightTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha-grande.png"));
+        marioBigLeftTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-izda-grande.png"));
+        mushroomTexture = new Texture(Gdx.files.internal("assets/sprites/items/setagrande.png"));
         coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
+        coinBlockTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda2.png"));
         goombaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/enemigo-seta.png"));
         goombaDeadTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/goomba-aplastado.png"));
         ninjiTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/ninji-izda.png"));
@@ -99,16 +116,22 @@ public class GameScreen implements Screen {
 
         isOnGround = false;
 
+        isBig = false;
+        lookingRight = true;
+
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
 
         coins = 0;
         coinsList = new Array<>();
         enemiesList = new Array<>();
         terrainCollisions = new Array<>();
+        questionBlocksList = new Array<>();
+        blockRewardsList = new Array<>();
 
         loadTerrainCollisionsFromTiled();
         loadCoinsFromTiled();
         loadEnemiesFromTiled();
+        loadQuestionBlocksFromTiled();
         loadGoalFromTiled();
         prepareVisibleLayers();
     }
@@ -122,6 +145,8 @@ public class GameScreen implements Screen {
         handleInput(delta);
         applyGravity(delta);
         updateEnemies(delta);
+        updateBlockRewards(delta);
+        checkQuestionBlockCollision();
         checkCollisions();
         checkCoinCollision();
         checkEnemyCollision();
@@ -143,6 +168,7 @@ public class GameScreen implements Screen {
         batch.begin();
 
         drawCoins();
+        drawBlockRewards();
         drawEnemies();
 
         batch.end();
@@ -153,7 +179,16 @@ public class GameScreen implements Screen {
         // 4. Mario y HUD encima.
         batch.begin();
 
-        batch.draw(marioTexture, marioX, marioY, marioWidth, marioHeight);
+        Texture currentMarioTexture;
+
+        if (isBig) {
+            currentMarioTexture =
+                lookingRight ? marioBigRightTexture : marioBigLeftTexture;
+        } else {
+            currentMarioTexture = marioTexture;
+        }
+
+        batch.draw(currentMarioTexture, marioX, marioY, marioWidth, marioHeight);
 
         font.draw(
             batch,
@@ -377,10 +412,12 @@ public class GameScreen implements Screen {
     private void handleInput(float delta) {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             marioX += speed * delta;
+            lookingRight = true;
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             marioX -= speed * delta;
+            lookingRight = false;
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && isOnGround) {
@@ -423,6 +460,24 @@ public class GameScreen implements Screen {
                 coins++;
             }
         }
+
+        for (int i = blockRewardsList.size - 1; i >= 0; i--) {
+
+            BlockReward reward = blockRewardsList.get(i);
+
+            if (reward.getType().equals("mushroom")
+                && marioBounds.overlaps(reward.getBounds())) {
+
+                isBig = true;
+
+                marioWidth = 80;
+                marioHeight = 96;
+
+                marioBounds.setSize(marioWidth, marioHeight);
+
+                blockRewardsList.removeIndex(i);
+            }
+        }
     }
 
     private void checkEnemyCollision() {
@@ -463,10 +518,13 @@ public class GameScreen implements Screen {
             terrainCollisions.clear();
             coinsList.clear();
             enemiesList.clear();
+            questionBlocksList.clear();
+            blockRewardsList.clear();
 
             loadTerrainCollisionsFromTiled();
             loadCoinsFromTiled();
             loadEnemiesFromTiled();
+            loadQuestionBlocksFromTiled();
             loadGoalFromTiled();
             prepareVisibleLayers();
 
@@ -504,5 +562,126 @@ public class GameScreen implements Screen {
 
         if (mapa != null) mapa.dispose();
         if (rendererMapa != null) rendererMapa.dispose();
+
+        if (coinBlockTexture != null) coinBlockTexture.dispose();
+
+        if (marioBigRightTexture != null) marioBigRightTexture.dispose();
+        if (marioBigLeftTexture != null) marioBigLeftTexture.dispose();
+        if (mushroomTexture != null) mushroomTexture.dispose();
+    }
+
+    private void loadQuestionBlocksFromTiled() {
+        MapLayer questionLayer = mapa.getLayers().get("question_blocks");
+
+        if (questionLayer == null) {
+            System.out.println("No existe la capa question_blocks en este nivel");
+            return;
+        }
+
+        com.badlogic.gdx.maps.MapObjects objects = questionLayer.getObjects();
+
+        for (com.badlogic.gdx.maps.MapObject object : objects) {
+            Rectangle rectangle =
+                ((com.badlogic.gdx.maps.objects.RectangleMapObject) object)
+                    .getRectangle();
+
+            String type = object.getProperties().get("type", String.class);
+
+            if (type == null || type.isBlank()) {
+                type = "coin";
+            }
+
+            questionBlocksList.add(new QuestionBlock(
+                rectangle.x,
+                rectangle.y,
+                rectangle.width,
+                rectangle.height,
+                type
+            ));
+        }
+    }
+
+    private void checkQuestionBlockCollision() {
+        if (verticalSpeed <= 0) {
+            return;
+        }
+
+        Rectangle headSensor = new Rectangle(
+            marioX + 8,
+            marioY + marioHeight - 4,
+            marioWidth - 16,
+            8
+        );
+
+        for (QuestionBlock block : questionBlocksList) {
+            if (block.isUsed()) {
+                continue;
+            }
+
+            Rectangle blockBounds = block.getBounds();
+
+            if (headSensor.overlaps(blockBounds)) {
+                block.use();
+                verticalSpeed = -150;
+                activateQuestionBlock(block);
+                break;
+            }
+        }
+    }
+
+    private void activateQuestionBlock(QuestionBlock block) {
+        Rectangle bounds = block.getBounds();
+
+        if (block.getType().equals("coin")) {
+            coins++;
+
+            blockRewardsList.add(new BlockReward(
+                bounds.x,
+                bounds.y + bounds.height,
+                24,
+                32,
+                "coin"
+            ));
+        }
+
+        if (block.getType().equals("mushroom")) {
+
+            blockRewardsList.add(new BlockReward(
+                bounds.x,
+                bounds.y + bounds.height,
+                40,
+                40,
+                "mushroom"
+            ));
+        }
+
+        if (block.getType().equals("star")) {
+            System.out.println("Bloque estrella activado");
+        }
+    }
+
+    private void updateBlockRewards(float delta) {
+        for (int i = blockRewardsList.size - 1; i >= 0; i--) {
+            BlockReward reward = blockRewardsList.get(i);
+            reward.update(delta);
+
+            if (!reward.isActive()) {
+                blockRewardsList.removeIndex(i);
+            }
+        }
+    }
+
+    private void drawBlockRewards() {
+        for (BlockReward reward : blockRewardsList) {
+            Rectangle bounds = reward.getBounds();
+
+            if (reward.getType().equals("coin")) {
+                batch.draw(coinBlockTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+
+            if (reward.getType().equals("mushroom")) {
+                batch.draw(mushroomTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        }
     }
 }
