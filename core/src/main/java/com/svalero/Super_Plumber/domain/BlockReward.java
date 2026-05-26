@@ -30,7 +30,7 @@ public class BlockReward {
         }
 
         if (type.equals("star")) {
-            // Luego haremos que se mueva/salte
+            // quieta de momento
         }
     }
 

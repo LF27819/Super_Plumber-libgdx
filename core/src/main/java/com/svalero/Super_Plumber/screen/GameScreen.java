@@ -75,6 +75,11 @@ public class GameScreen implements Screen {
     private Texture coinBlockTexture;
     private Array<BlockReward> blockRewardsList;
 
+    private Texture starTexture;
+
+    private boolean starPower;
+    private float starTimer;
+
     public GameScreen(Super_Plumber game) {
         this.game = game;
     }
@@ -96,6 +101,7 @@ public class GameScreen implements Screen {
         marioBigRightTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-dcha-grande.png"));
         marioBigLeftTexture = new Texture(Gdx.files.internal("assets/sprites/player/mario-izda-grande.png"));
         mushroomTexture = new Texture(Gdx.files.internal("assets/sprites/items/setagrande.png"));
+        starTexture = new Texture(Gdx.files.internal("assets/sprites/items/estrella.png"));
         coinTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda1.png"));
         coinBlockTexture = new Texture(Gdx.files.internal("assets/sprites/items/moneda2.png"));
         goombaTexture = new Texture(Gdx.files.internal("assets/sprites/enemies/enemigo-seta.png"));
@@ -118,6 +124,9 @@ public class GameScreen implements Screen {
 
         isBig = false;
         lookingRight = true;
+
+        starPower = false;
+        starTimer = 0;
 
         marioBounds = new Rectangle(marioX, marioY, marioWidth, marioHeight);
 
@@ -146,6 +155,7 @@ public class GameScreen implements Screen {
         applyGravity(delta);
         updateEnemies(delta);
         updateBlockRewards(delta);
+        updateStarPower(delta);
         checkQuestionBlockCollision();
         checkCollisions();
         checkCoinCollision();
@@ -477,7 +487,18 @@ public class GameScreen implements Screen {
 
                 blockRewardsList.removeIndex(i);
             }
+
+            if (reward.getType().equals("star")
+                && marioBounds.overlaps(reward.getBounds())) {
+
+                starPower = true;
+                starTimer = 8f;
+
+                blockRewardsList.removeIndex(i);
+            }
         }
+
+
     }
 
     private void checkEnemyCollision() {
@@ -495,6 +516,10 @@ public class GameScreen implements Screen {
                     enemy.die();
                     verticalSpeed = jumpForce / 2;
                 } else {
+                    if (starPower) {
+                        enemy.die();
+                        continue;
+                    }
                     resetPlayer();
                 }
             }
@@ -656,7 +681,14 @@ public class GameScreen implements Screen {
         }
 
         if (block.getType().equals("star")) {
-            System.out.println("Bloque estrella activado");
+
+            blockRewardsList.add(new BlockReward(
+                bounds.x,
+                bounds.y + bounds.height,
+                40,
+                40,
+                "star"
+            ));
         }
     }
 
@@ -682,6 +714,22 @@ public class GameScreen implements Screen {
             if (reward.getType().equals("mushroom")) {
                 batch.draw(mushroomTexture, bounds.x, bounds.y, bounds.width, bounds.height);
             }
+
+            if (reward.getType().equals("star")) {
+                batch.draw(starTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            }
         }
     }
+
+    private void updateStarPower(float delta) {
+
+        if (starPower) {
+            starTimer -= delta;
+
+            if (starTimer <= 0) {
+                starPower = false;
+            }
+        }
+    }
+
 }

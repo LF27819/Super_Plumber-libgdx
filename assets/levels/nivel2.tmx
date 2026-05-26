@@ -43,7 +43,7 @@
   </object>
  </objectgroup>
  <objectgroup id="10" name="question_blocks" locked="1">
-  <object id="33" x="289" y="432" width="28.6667" height="15.6667">
+  <object id="33" x="289" y="448.5" width="28.6667" height="15.6667">
    <properties>
     <property name="type" value="mushroom"/>
    </properties>
@@ -58,7 +58,7 @@
     <property name="type" value="coin"/>
    </properties>
   </object>
-  <object id="39" x="608" y="430.167" width="29.3333" height="17">
+  <object id="39" x="609" y="449.167" width="29.3333" height="17">
    <properties>
     <property name="type" value="star"/>
    </properties>
@@ -73,7 +73,7 @@
     <property name="type" value="coin"/>
    </properties>
   </object>
-  <object id="43" x="2272.67" y="239.5" width="29.3333" height="17">
+  <object id="43" x="2272.17" y="257" width="29.3333" height="17">
    <properties>
     <property name="type" value="mushroom"/>
    </properties>
