@@ -39,11 +39,12 @@ public class InstructionsScreen implements Screen {
 
     @Override
     public void show() {
-        batch  = new SpriteBatch();
+        batch = new SpriteBatch();
+
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        font   = FontManager.createMarioFont(10, Color.WHITE);
+        font = FontManager.createMarioFont(10, Color.WHITE);
         layout = new GlyphLayout();
 
         backgroundTexture = new Texture(Gdx.files.internal("assets/sprites/ui/menu-background.png"));
@@ -64,18 +65,22 @@ public class InstructionsScreen implements Screen {
 
         batch.draw(backgroundTexture, 0, 0, sw, sh);
 
-        FontManager.drawCentered(batch, font, layout,"INSTRUCCIONES", sw, sh - 90, 2f);
+        FontManager.drawCentered(batch, font, layout, "INSTRUCCIONES", sw, sh / 2f + 160, 2f);
 
         font.getData().setScale(1.1f);
-        float y = sh - 140;
+
+        float textBlockWidth = 760;
+        float textX = Math.max(20, (sw - textBlockWidth) / 2f);
+        float y = sh / 2f + 90;
         float spacing = 30;
+
         for (String line : LINES) {
-            font.draw(batch, line, 20, y);
+            font.draw(batch, line, textX, y);
             y -= spacing;
         }
 
-        FontManager.drawCentered(batch, font, layout,"> VOLVER AL MENU", sw, 100, 1.2f);
-        FontManager.drawCentered(batch, font, layout,"Pulsa ENTER o ESC para volver", sw, 75, 0.9f);
+        FontManager.drawCentered(batch, font, layout, "> VOLVER AL MENU", sw, 100, 1.2f);
+        FontManager.drawCentered(batch, font, layout, "Pulsa ENTER o ESC para volver", sw, 75, 0.9f);
 
         batch.end();
     }

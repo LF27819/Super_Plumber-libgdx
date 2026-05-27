@@ -11,16 +11,17 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.svalero.Super_Plumber.Super_Plumber;
 import com.svalero.Super_Plumber.manager.FontManager;
+import com.badlogic.gdx.graphics.Texture;
 
-//Sin usar aun
 public class VictoryScreen implements Screen {
 
     private final Super_Plumber game;
 
-    private SpriteBatch        batch;
+    private SpriteBatch batch;
     private OrthographicCamera camera;
-    private BitmapFont         font;
-    private GlyphLayout        layout;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private Texture backgroundImage;
 
     public VictoryScreen(Super_Plumber game) {
         this.game = game;
@@ -33,6 +34,9 @@ public class VictoryScreen implements Screen {
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         font   = FontManager.createMarioFont(20, Color.YELLOW);
         layout = new GlyphLayout();
+        backgroundImage = new Texture(
+            Gdx.files.internal("assets/sprites/ui/victory_background.png")
+        );
     }
 
     @Override
@@ -51,8 +55,13 @@ public class VictoryScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        FontManager.drawCentered(batch, font, layout, "¡HAS GANADO!", sw, sh / 2f + 60, 2.5f);
-        FontManager.drawCentered(batch, font, layout, "Pulsa ENTER para volver al menu", sw, sh / 2f, 1.2f);
+        batch.draw(backgroundImage, 0, 0, sw, sh);
+
+        FontManager.drawCentered(batch, font, layout,
+            "¡HAS GANADO!", sw, sh / 2f + 80, 1.2f);
+
+        FontManager.drawCentered(batch, font, layout,
+            "Pulsa ENTER para volver", sw, sh / 2f - 120, 0.7f);
 
         batch.end();
     }
@@ -66,5 +75,6 @@ public class VictoryScreen implements Screen {
     public void dispose() {
         if (batch != null) batch.dispose();
         if (font  != null) font.dispose();
+        if (backgroundImage != null) backgroundImage.dispose();
     }
 }
