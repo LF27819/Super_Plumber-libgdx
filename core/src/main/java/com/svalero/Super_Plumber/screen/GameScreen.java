@@ -144,9 +144,7 @@ public class GameScreen implements Screen {
 
         float topY = cameraY + cameraHeight / 2 - 40;
 
-        // =========================
         // MONEDAS
-        // =========================
 
         float coinX = cameraX - cameraWidth / 2 + 20;
 
@@ -165,9 +163,7 @@ public class GameScreen implements Screen {
             topY + 12
         );
 
-        // =========================
         // NIVEL
-        // =========================
 
         hudFont.draw(
             batch,
@@ -176,9 +172,7 @@ public class GameScreen implements Screen {
             topY + 12
         );
 
-        // =========================
         // VIDAS
-        // =========================
 
         float livesX = cameraX + cameraWidth / 2 - 180;
 
