@@ -10,7 +10,7 @@ import com.svalero.Super_Plumber.domain.Enemy;
 import com.svalero.Super_Plumber.domain.QuestionBlock;
 import com.svalero.Super_Plumber.util.Constants;
 
-//Gestiona la lógica del juego: entrada del jugador, física, colisiones  con terreno, monedas, enemigos y bloques pregunta.
+// Gestiona la lógica del juego: movimiento, físicas,colisiones, enemigos, monedas y power-ups.
 
 public class LogicManager {
 
@@ -21,6 +21,7 @@ public class LogicManager {
     private float playerHeight;
 
     private float verticalSpeed;
+
     private boolean onGround;
     private boolean big;
     private boolean lookingRight;
@@ -45,9 +46,17 @@ public class LogicManager {
     // Callback para cambio de nivel
     private Runnable onGoalReached;
 
+    // Audio y musica
+    private AudioManager audioManager;
+
+    //Termino nivel y espero
+    private boolean levelCompleted;
+    private float victoryTimer;
+
     public LogicManager(LevelManager levelManager) {
         this.levelManager = levelManager;
         this.playerBounds = new Rectangle();
+
         reset();
     }
 
@@ -59,53 +68,104 @@ public class LogicManager {
         this.onGoalReached = callback;
     }
 
+    public void setAudioManager(AudioManager audioManager) {
+        this.audioManager = audioManager;
+    }
+
+    private void playSound(String soundName) {
+        if (audioManager == null) return;
+
+        switch (soundName) {
+            case "jump":
+                audioManager.playJump();
+                break;
+            case "coin":
+                audioManager.playCoin();
+                break;
+            case "powerup":
+                audioManager.playPowerup();
+                break;
+            case "stomp":
+                audioManager.playStomp();
+                break;
+            case "hit":
+                audioManager.playHit();
+                break;
+            case "death":
+                audioManager.playDeath();
+                break;
+        }
+    }
+
     // Reset / init
 
     public void reset() {
+
         playerX = Constants.PLAYER_START_X;
         playerY = Constants.PLAYER_START_Y;
+
         playerWidth = Constants.PLAYER_SMALL_WIDTH;
         playerHeight = Constants.PLAYER_SMALL_HEIGHT;
 
         verticalSpeed = 0;
+
         onGround = false;
         big = false;
         lookingRight = true;
         moving = false;
         dead = false;
+
         deathTimer = 0;
 
         starPower = false;
         starTimer = 0;
 
-        playerBounds.set(playerX, playerY, playerWidth, playerHeight);
+        playerBounds.set(
+            playerX,
+            playerY,
+            playerWidth,
+            playerHeight
+        );
+
+        levelCompleted = false;
+        victoryTimer = 0;
     }
 
+    // Update principal
 
     public void update(float delta) {
         if (dead) {
             updateDeath(delta);
-        } else {
-            handleInput(delta);
-            applyGravity(delta);
-            checkTerrainCollisions();
-            checkQuestionBlockCollisions();
-            checkCoinCollisions();
-            checkEnemyCollisions();
-            checkGoalCollision();
-            checkPlayerFall();
-            updateEnemies(delta);
-            updateBlockRewards(delta);
-            updateStarPower(delta);
+            return;
         }
-    }
 
+        if (levelCompleted) {
+            victoryTimer += delta;
+            if (victoryTimer >= 2f) {
+                if (onGoalReached != null) {
+                    onGoalReached.run();
+                }
+            }
+            return;
+        }
+
+        handleInput(delta);
+        applyGravity(delta);
+        checkTerrainCollisions();
+        checkQuestionBlockCollisions();
+        checkCoinCollisions();
+        checkEnemyCollisions();
+        checkGoalCollision();
+        checkPlayerFall();
+        updateEnemies(delta);
+        updateBlockRewards(delta);
+        updateStarPower(delta);
+    }
 
     // Input y física
 
     private void handleInput(float delta) {
         moving = false;
-
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             playerX += Constants.PLAYER_SPEED * delta;
             lookingRight = true;
@@ -121,6 +181,7 @@ public class LogicManager {
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && onGround) {
             verticalSpeed = Constants.PLAYER_JUMP_FORCE;
             onGround = false;
+            playSound("jump");
         }
     }
 
@@ -131,14 +192,15 @@ public class LogicManager {
         onGround = false;
     }
 
-
     // Colisiones con terreno
 
     private void checkTerrainCollisions() {
         for (Rectangle terrain : levelManager.getTerrainCollisions()) {
             if (playerBounds.overlaps(terrain) && verticalSpeed <= 0) {
-                float prevBottom = playerY - verticalSpeed * Gdx.graphics.getDeltaTime();
-                if (prevBottom >= terrain.y + terrain.height - 5) {
+                float previousBottom =
+                    playerY - verticalSpeed * Gdx.graphics.getDeltaTime();
+
+                if (previousBottom >= terrain.y + terrain.height - 5) {
                     playerY = terrain.y + terrain.height;
                     verticalSpeed = 0;
                     onGround = true;
@@ -152,7 +214,6 @@ public class LogicManager {
 
     private void checkQuestionBlockCollisions() {
         if (verticalSpeed <= 0) return;
-
         Rectangle head = new Rectangle(
             playerX + 8,
             playerY + playerHeight - 4,
@@ -162,9 +223,11 @@ public class LogicManager {
 
         for (QuestionBlock block : levelManager.getQuestionBlocks()) {
             if (block.isUsed()) continue;
+
             if (head.overlaps(block.getBounds())) {
                 block.use();
                 verticalSpeed = -150;
+                playSound("block");
                 spawnBlockReward(block);
                 break;
             }
@@ -172,20 +235,44 @@ public class LogicManager {
     }
 
     private void spawnBlockReward(QuestionBlock block) {
-        Rectangle b = block.getBounds();
+        Rectangle blockBounds = block.getBounds();
         switch (block.getType()) {
             case "coin":
                 coinCount++;
-                levelManager.getBlockRewards().add(new BlockReward(
-                    b.x, b.y + b.height, 24, 32, "coin"));
+                playSound("coin");
+                levelManager.getBlockRewards().add(
+                    new BlockReward(
+                        blockBounds.x,
+                        blockBounds.y + blockBounds.height,
+                        24,
+                        32,
+                        "coin"
+                    )
+                );
                 break;
+
             case "mushroom":
-                levelManager.getBlockRewards().add(new BlockReward(
-                    b.x, b.y + b.height, 40, 40, "mushroom"));
+                levelManager.getBlockRewards().add(
+                    new BlockReward(
+                        blockBounds.x,
+                        blockBounds.y + blockBounds.height,
+                        40,
+                        40,
+                        "mushroom"
+                    )
+                );
                 break;
+
             case "star":
-                levelManager.getBlockRewards().add(new BlockReward(
-                    b.x, b.y + b.height, 40, 40, "star"));
+                levelManager.getBlockRewards().add(
+                    new BlockReward(
+                        blockBounds.x,
+                        blockBounds.y + blockBounds.height,
+                        40,
+                        40,
+                        "star"
+                    )
+                );
                 break;
         }
     }
@@ -194,15 +281,18 @@ public class LogicManager {
 
     private void checkCoinCollisions() {
         for (Coin coin : levelManager.getCoins()) {
-            if (!coin.isCollected() && playerBounds.overlaps(coin.getBounds())) {
+            if (!coin.isCollected()
+                && playerBounds.overlaps(coin.getBounds())) {
                 coin.setCollected(true);
                 coinCount++;
+                playSound("coin");
             }
         }
 
         Array<BlockReward> rewards = levelManager.getBlockRewards();
         for (int i = rewards.size - 1; i >= 0; i--) {
             BlockReward reward = rewards.get(i);
+
             if (playerBounds.overlaps(reward.getBounds())) {
                 collectReward(reward);
                 rewards.removeIndex(i);
@@ -214,13 +304,20 @@ public class LogicManager {
         switch (reward.getType()) {
             case "mushroom":
                 big = true;
-                playerWidth  = Constants.PLAYER_BIG_WIDTH;
+                playerWidth = Constants.PLAYER_BIG_WIDTH;
                 playerHeight = Constants.PLAYER_BIG_HEIGHT;
                 playerBounds.setSize(playerWidth, playerHeight);
+                playSound("powerup");
                 break;
+
             case "star":
                 starPower = true;
                 starTimer = 8f;
+                playSound("powerup");
+
+                if (audioManager != null) {
+                    audioManager.playStarSound();
+                }
                 break;
         }
     }
@@ -229,24 +326,32 @@ public class LogicManager {
 
     private void updateEnemies(float delta) {
         for (Enemy enemy : levelManager.getEnemies()) {
-            enemy.update(delta, levelManager.getTerrainCollisions());
+            enemy.update(
+                delta,
+                levelManager.getTerrainCollisions()
+            );
         }
     }
 
     private void checkEnemyCollisions() {
         for (Enemy enemy : levelManager.getEnemies()) {
             if (!enemy.isAlive() || enemy.isDying()) continue;
-
             if (playerBounds.overlaps(enemy.getBounds())) {
                 boolean falling = verticalSpeed < 0;
-                boolean goomba = enemy.getType().equals("goomba");
-                boolean above = playerY > enemy.getBounds().y + enemy.getBounds().height / 2f;
+                boolean goomba =
+                    enemy.getType().equals("goomba");
+                boolean above =
+                    playerY > enemy.getBounds().y
+                        + enemy.getBounds().height / 2f;
 
                 if (goomba && falling && above) {
                     enemy.die();
-                    verticalSpeed = Constants.PLAYER_JUMP_FORCE / 2f;
+                    verticalSpeed =
+                        Constants.PLAYER_JUMP_FORCE / 2f;
+                    playSound("stomp");
                 } else if (starPower) {
                     enemy.die();
+                    playSound("stomp");
                 } else {
                     damagePlayer();
                 }
@@ -258,8 +363,9 @@ public class LogicManager {
 
     private void damagePlayer() {
         if (big) {
+            playSound("hit");
             big = false;
-            playerWidth  = Constants.PLAYER_SMALL_WIDTH;
+            playerWidth = Constants.PLAYER_SMALL_WIDTH;
             playerHeight = Constants.PLAYER_SMALL_HEIGHT;
             playerBounds.setSize(playerWidth, playerHeight);
             verticalSpeed = 250;
@@ -270,14 +376,19 @@ public class LogicManager {
     }
 
     private void killPlayer() {
+        if (dead) return;
         dead = true;
         deathTimer = 0;
         big = false;
         moving = false;
-        playerWidth  = Constants.PLAYER_SMALL_WIDTH;
+        playerWidth = Constants.PLAYER_SMALL_WIDTH;
         playerHeight = Constants.PLAYER_SMALL_HEIGHT;
         playerBounds.setSize(playerWidth, playerHeight);
         verticalSpeed = 250;
+        playSound("death");
+        if (audioManager != null && starPower) {
+            audioManager.stopStarSound();
+        }
     }
 
     private void updateDeath(float delta) {
@@ -285,7 +396,6 @@ public class LogicManager {
         verticalSpeed += Constants.PLAYER_GRAVITY * delta;
         playerY += verticalSpeed * delta;
         playerBounds.setPosition(playerX, playerY);
-
         if (deathTimer >= 1.5f) {
             reset();
         }
@@ -295,9 +405,13 @@ public class LogicManager {
 
     private void checkGoalCollision() {
         Rectangle goal = levelManager.getGoalBounds();
-        if (goal != null && playerBounds.overlaps(goal)) {
-            if (onGoalReached != null) {
-                onGoalReached.run();
+        if (goal != null
+            && playerBounds.overlaps(goal)
+            && !levelCompleted) {
+            levelCompleted = true;
+            if (audioManager != null) {
+                audioManager.stopStarSound();
+                audioManager.playVictory();
             }
         }
     }
@@ -308,39 +422,75 @@ public class LogicManager {
         }
     }
 
-
-    // Recompensas de bloque y star
+    // Recompensas de bloque y estrella
 
     private void updateBlockRewards(float delta) {
-        Array<BlockReward> rewards = levelManager.getBlockRewards();
+        Array<BlockReward> rewards =
+            levelManager.getBlockRewards();
         for (int i = rewards.size - 1; i >= 0; i--) {
-            BlockReward r = rewards.get(i);
-            r.update(delta);
-            if (!r.isActive()) rewards.removeIndex(i);
+            BlockReward reward = rewards.get(i);
+            reward.update(delta);
+            if (!reward.isActive()) {
+                rewards.removeIndex(i);
+            }
         }
     }
 
     private void updateStarPower(float delta) {
         if (starPower) {
             starTimer -= delta;
-            if (starTimer <= 0) starPower = false;
+            if (starTimer <= 0) {
+                starPower = false;
+                if (audioManager != null) {
+                    audioManager.stopStarSound();
+                }
+            }
         }
     }
 
     // Getters para render y pantalla
 
-    public float getPlayerX()      { return playerX; }
-    public float getPlayerY()      { return playerY; }
-    public float getPlayerWidth()  { return playerWidth; }
-    public float getPlayerHeight() { return playerHeight; }
+    public float getPlayerX() {
+        return playerX;
+    }
 
-    public boolean isOnGround()    { return onGround; }
-    public boolean isBig()         { return big; }
-    public boolean isLookingRight(){ return lookingRight; }
-    public boolean isMoving()      { return moving; }
-    public boolean isDead()        { return dead; }
+    public float getPlayerY() {
+        return playerY;
+    }
 
-    public boolean hasStarPower()  { return starPower; }
-    public int getCoinCount()      { return coinCount; }
+    public float getPlayerWidth() {
+        return playerWidth;
+    }
 
+    public float getPlayerHeight() {
+        return playerHeight;
+    }
+
+    public boolean isOnGround() {
+        return onGround;
+    }
+
+    public boolean isBig() {
+        return big;
+    }
+
+    public boolean isLookingRight() {
+        return lookingRight;
+    }
+
+    public boolean isMoving() {
+        return moving;
+    }
+
+    public boolean isDead() {
+        return dead;
+    }
+
+    public boolean hasStarPower() {
+        return starPower;
+    }
+
+    public int getCoinCount() {
+        return coinCount;
+    }
 }

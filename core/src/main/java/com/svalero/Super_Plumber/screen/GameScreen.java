@@ -16,6 +16,7 @@ import com.svalero.Super_Plumber.manager.RenderManager;
 import com.svalero.Super_Plumber.manager.ResourceManager;
 import com.svalero.Super_Plumber.util.Constants;
 import com.badlogic.gdx.graphics.Texture;
+import com.svalero.Super_Plumber.manager.AudioManager;
 
 public class GameScreen implements Screen {
 
@@ -32,6 +33,7 @@ public class GameScreen implements Screen {
     private LevelManager levelManager;
     private LogicManager logicManager;
     private RenderManager renderManager;
+    private AudioManager audioManager;
 
     private int currentLevel;
     private int remainingLives;
@@ -62,9 +64,14 @@ public class GameScreen implements Screen {
         resourceManager = new ResourceManager();
         resourceManager.load();
 
+        audioManager = new AudioManager();
+        audioManager.load();
+        audioManager.playBackgroundMusic();
+
         levelManager = new LevelManager();
         cameraManager = new CameraManager();
         logicManager = new LogicManager(levelManager);
+        logicManager.setAudioManager(audioManager);
         renderManager = new RenderManager(resourceManager, levelManager, logicManager);
 
         logicManager.setOnGoalReached(this::advanceLevel);
@@ -220,5 +227,6 @@ public class GameScreen implements Screen {
         if (hudFont != null) hudFont.dispose();
         if (resourceManager != null) resourceManager.dispose();
         if (levelManager != null) levelManager.dispose();
+        if (audioManager != null) audioManager.dispose();
     }
 }
