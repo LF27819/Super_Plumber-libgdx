@@ -20,11 +20,11 @@ public class ConfigurationScreen implements Screen {
 
     private final Super_Plumber game;
 
-    private SpriteBatch       batch;
+    private SpriteBatch batch;
     private OrthographicCamera camera;
-    private BitmapFont        font;
-    private GlyphLayout       layout;
-    private Texture           backgroundTexture;
+    private BitmapFont font;
+    private GlyphLayout layout;
+    private Texture backgroundTexture;
 
     private int selectedOption;
 
@@ -34,15 +34,16 @@ public class ConfigurationScreen implements Screen {
 
     @Override
     public void show() {
-        batch  = new SpriteBatch();
+        batch = new SpriteBatch();
+
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        font   = FontManager.createMarioFont(15, Color.WHITE);
+        font = FontManager.createMarioFont(15, Color.WHITE);
         layout = new GlyphLayout();
 
         backgroundTexture = new Texture(Gdx.files.internal("assets/sprites/ui/menu-background.png"));
-        selectedOption    = 0;
+        selectedOption = 0;
     }
 
     @Override
@@ -62,13 +63,13 @@ public class ConfigurationScreen implements Screen {
 
         FontManager.drawCentered(batch, font, layout, "CONFIGURACION", sw, sh - 120, 2f);
 
-        float firstY  = sh / 2f + 60;
+        float firstY = sh / 2f + 60;
         float spacing = 45;
 
-        drawOption(sw, firstY,               "MUSICA: "       + onOff(ConfigurationManager.musicEnabled), 0);
-        drawOption(sw, firstY - spacing,     "SONIDOS: "      + onOff(ConfigurationManager.soundEnabled), 1);
-        drawOption(sw, firstY - spacing * 2, "MODO DIFICIL: " + onOff(ConfigurationManager.hardMode),     2);
-        drawOption(sw, firstY - spacing * 3, "VOLVER AL MENU",                                            3);
+        drawOption(sw, firstY, "MUSICA: " + onOff(ConfigurationManager.isMusicEnabled()), 0);
+        drawOption(sw, firstY - spacing, "SONIDOS: " + onOff(ConfigurationManager.isSoundEnabled()), 1);
+        drawOption(sw, firstY - spacing * 2, "MODO DIFICIL: " + onOff(ConfigurationManager.isHardMode()), 2);
+        drawOption(sw, firstY - spacing * 3, "VOLVER AL MENU", 3);
 
         batch.end();
     }
@@ -93,10 +94,18 @@ public class ConfigurationScreen implements Screen {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (selectedOption) {
-                case 0: ConfigurationManager.musicEnabled = !ConfigurationManager.musicEnabled; break;
-                case 1: ConfigurationManager.soundEnabled = !ConfigurationManager.soundEnabled; break;
-                case 2: ConfigurationManager.hardMode     = !ConfigurationManager.hardMode;     break;
-                case 3: game.setScreen(new MainMenuScreen(game));                               break;
+                case 0:
+                    ConfigurationManager.toggleMusic();
+                    break;
+                case 1:
+                    ConfigurationManager.toggleSound();
+                    break;
+                case 2:
+                    ConfigurationManager.toggleHardMode();
+                    break;
+                case 3:
+                    game.setScreen(new MainMenuScreen(game));
+                    break;
             }
         }
 
@@ -110,14 +119,14 @@ public class ConfigurationScreen implements Screen {
         camera.setToOrtho(false, width, height);
     }
 
-    @Override public void pause()  {}
+    @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void hide()   {}
+    @Override public void hide() {}
 
     @Override
     public void dispose() {
-        if (batch             != null) batch.dispose();
-        if (font              != null) font.dispose();
+        if (batch != null) batch.dispose();
+        if (font != null) font.dispose();
         if (backgroundTexture != null) backgroundTexture.dispose();
     }
 }

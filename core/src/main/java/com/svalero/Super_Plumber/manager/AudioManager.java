@@ -7,8 +7,8 @@ import com.badlogic.gdx.audio.Sound;
 public class AudioManager {
 
     private Music backgroundMusic;
-
     private Music starSound;
+
     private Sound jumpSound;
     private Sound coinSound;
     private Sound powerupSound;
@@ -24,7 +24,6 @@ public class AudioManager {
         backgroundMusic.setLooping(true);
         starSound.setLooping(true);
 
-
         jumpSound = Gdx.audio.newSound(Gdx.files.internal("assets/sounds/jump.mp3"));
         coinSound = Gdx.audio.newSound(Gdx.files.internal("assets/sounds/coin.mp3"));
         powerupSound = Gdx.audio.newSound(Gdx.files.internal("assets/sounds/powerup.mp3"));
@@ -34,41 +33,68 @@ public class AudioManager {
         victorySound = Gdx.audio.newSound(Gdx.files.internal("assets/sounds/victory.mp3"));
     }
 
+
     public void playBackgroundMusic() {
-        if (!backgroundMusic.isPlaying()) backgroundMusic.play();
+        if (!ConfigurationManager.isMusicEnabled()) {
+            backgroundMusic.stop();
+            return;
+        }
+
+        if (!backgroundMusic.isPlaying()) {
+            backgroundMusic.play();
+        }
+    }
+
+    public void playStarSound() {
+        if (!ConfigurationManager.isSoundEnabled()) return;
+        starSound.play();
+    }
+
+    public void stopStarSound() {
+        starSound.stop();
     }
 
     public void stopBackgroundMusic() {
         backgroundMusic.stop();
     }
 
-    public void playStarSound() {
-        backgroundMusic.pause();
-        starSound.play();
+    public void playJump() {
+        if (ConfigurationManager.isSoundEnabled()) jumpSound.play();
     }
 
-    public void stopStarSound() {
-        starSound.stop();
-        backgroundMusic.play();
+    public void playCoin() {
+        if (ConfigurationManager.isSoundEnabled()) coinSound.play();
     }
 
-    public void playJump() { jumpSound.play(); }
-    public void playCoin() { coinSound.play(); }
-    public void playPowerup() { powerupSound.play(); }
-    public void playStomp() { stompSound.play(); }
-    public void playHit() { hitSound.play(); }
-    public void playDeath() { deathSound.play(); }
-    public void playVictory() { victorySound.play(); }
+    public void playPowerup() {
+        if (ConfigurationManager.isSoundEnabled()) powerupSound.play();
+    }
+
+    public void playStomp() {
+        if (ConfigurationManager.isSoundEnabled()) stompSound.play();
+    }
+
+    public void playHit() {
+        if (ConfigurationManager.isSoundEnabled()) hitSound.play();
+    }
+
+    public void playDeath() {
+        if (ConfigurationManager.isSoundEnabled()) deathSound.play();
+    }
+
+    public void playVictory() {
+        if (ConfigurationManager.isSoundEnabled()) victorySound.play();
+    }
 
     public void dispose() {
-        backgroundMusic.dispose();
-        starSound.dispose();
-        jumpSound.dispose();
-        coinSound.dispose();
-        powerupSound.dispose();
-        stompSound.dispose();
-        hitSound.dispose();
-        deathSound.dispose();
-        victorySound.dispose();
+        if (backgroundMusic != null) backgroundMusic.dispose();
+        if (starSound != null) starSound.dispose();
+        if (jumpSound != null) jumpSound.dispose();
+        if (coinSound != null) coinSound.dispose();
+        if (powerupSound != null) powerupSound.dispose();
+        if (stompSound != null) stompSound.dispose();
+        if (hitSound != null) hitSound.dispose();
+        if (deathSound != null) deathSound.dispose();
+        if (victorySound != null) victorySound.dispose();
     }
 }

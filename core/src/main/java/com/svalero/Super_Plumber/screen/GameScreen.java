@@ -219,7 +219,14 @@ public class GameScreen implements Screen {
 
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void hide() {}
+
+    @Override
+    public void hide() {
+        if (audioManager != null) {
+            audioManager.stopBackgroundMusic();
+            audioManager.stopStarSound();
+        }
+    }
 
     @Override
     public void dispose() {
