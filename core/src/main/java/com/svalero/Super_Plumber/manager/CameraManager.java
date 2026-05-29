@@ -16,14 +16,18 @@ public class CameraManager {
     }
 
      //Actualiza la posición de la cámara para seguir al jugador horizontalmente,
-     //con límite izquierdo para no mostrar fuera del mapa.
+     //con límite izquierdo y derecho para no mostrar fuera del mapa.
 
-    public void update(float playerX, float playerWidth) {
+    public void update(float playerX, float playerWidth, float levelWidth) {
         float targetX = playerX + playerWidth / 2f;
         float halfViewport = camera.viewportWidth / 2f;
 
         if (targetX < halfViewport) {
             targetX = halfViewport;
+        }
+
+        if (targetX > levelWidth - halfViewport) {
+            targetX = levelWidth - halfViewport;
         }
 
         camera.position.x = targetX;
