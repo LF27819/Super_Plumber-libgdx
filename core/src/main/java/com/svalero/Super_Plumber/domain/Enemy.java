@@ -1,6 +1,7 @@
 package com.svalero.Super_Plumber.domain;
 
 import com.badlogic.gdx.math.Rectangle;
+import com.svalero.Super_Plumber.manager.ConfigurationManager;
 
 public class Enemy {
 
@@ -25,7 +26,8 @@ public class Enemy {
         this.initialX = x;
         this.initialY = y;
 
-        this.speed = 80;
+        this.speed = ConfigurationManager.isHardMode() ? 120 : 80;
+
         this.movingRight = true;
         this.movingUp = true;
 
@@ -94,31 +96,6 @@ public class Enemy {
         }
     }
 
-    public void die() {
-        if (type.equals("goomba")) {
-            dying = true;
-            bounds.height = bounds.height / 2;
-        } else {
-            alive = false;
-        }
-    }
-
-    public Rectangle getBounds() {
-        return bounds;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public boolean isAlive() {
-        return alive;
-    }
-
-    public boolean isDying() {
-        return dying;
-    }
-
     private void movePlant(float delta) {
         float visibleHeight = 56;
         float pauseTime = 1.0f;
@@ -152,5 +129,30 @@ public class Enemy {
                 deathTimer = 0;
             }
         }
+    }
+
+    public void die() {
+        if (type.equals("goomba")) {
+            dying = true;
+            bounds.height = bounds.height / 2;
+        } else {
+            alive = false;
+        }
+    }
+
+    public Rectangle getBounds() {
+        return bounds;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public boolean isAlive() {
+        return alive;
+    }
+
+    public boolean isDying() {
+        return dying;
     }
 }
