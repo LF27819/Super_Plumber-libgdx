@@ -9,13 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.svalero.Super_Plumber.Super_Plumber;
-import com.svalero.Super_Plumber.manager.AudioManager;
-import com.svalero.Super_Plumber.manager.CameraManager;
-import com.svalero.Super_Plumber.manager.FontManager;
-import com.svalero.Super_Plumber.manager.LevelManager;
-import com.svalero.Super_Plumber.manager.LogicManager;
-import com.svalero.Super_Plumber.manager.RenderManager;
-import com.svalero.Super_Plumber.manager.ResourceManager;
+import com.svalero.Super_Plumber.manager.*;
 import com.svalero.Super_Plumber.util.Constants;
 
 public class GameScreen implements Screen {
@@ -85,7 +79,13 @@ public class GameScreen implements Screen {
         logicManager.setOnGoalReached(this::advanceLevel);
 
         currentLevel = 0;
-        remainingLives = INITIAL_LIVES;
+
+        if (ConfigurationManager.isHardMode()) {
+            remainingLives = 1;
+        } else {
+            remainingLives = INITIAL_LIVES;
+        }
+
         deathAlreadyCounted = false;
 
         levelManager.loadLevel(LEVELS[currentLevel]);
