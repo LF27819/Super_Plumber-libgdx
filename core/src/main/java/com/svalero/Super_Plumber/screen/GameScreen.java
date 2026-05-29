@@ -101,7 +101,11 @@ public class GameScreen implements Screen {
             animationTimer += delta;
             logicManager.update(delta);
             updateLives();
-            cameraManager.update(logicManager.getPlayerX(), logicManager.getPlayerWidth());
+            cameraManager.update(
+                logicManager.getPlayerX(),
+                logicManager.getPlayerWidth(),
+                levelManager.getLevelWidth()
+            );
         }
 
         drawScene();

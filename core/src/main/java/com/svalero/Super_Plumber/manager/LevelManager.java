@@ -290,6 +290,11 @@ public class LevelManager {
         return goalBounds;
     }
 
+    public float getLevelWidth() {
+        return map.getProperties().get("width", Integer.class)
+            * map.getProperties().get("tilewidth", Integer.class);
+    }
+
     public void dispose() {
 
         if (mapRenderer != null) {
