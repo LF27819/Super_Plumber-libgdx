@@ -252,13 +252,22 @@ public class GameScreen implements Screen {
         currentLevel++;
 
         if (currentLevel >= LEVELS.length) {
-            game.setScreen(new VictoryScreen(game));
+            int finalScore = calculateFinalScore();
+            game.setScreen(new VictoryScreen(game, finalScore));
             return;
         }
 
         levelManager.loadLevel(LEVELS[currentLevel]);
         logicManager.setLevelManager(levelManager);
         logicManager.reset();
+    }
+
+    private int calculateFinalScore() {
+        int coinScore = logicManager.getCoinCount() * 100;
+        int livesScore = remainingLives * 500;
+        int levelScore = LEVELS.length * 1000;
+
+        return coinScore + livesScore + levelScore;
     }
 
     @Override
