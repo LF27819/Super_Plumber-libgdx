@@ -50,6 +50,14 @@ public class AudioManager {
         starSound.play();
     }
 
+    public void applyConfiguration() {
+        if (!ConfigurationManager.isMusicEnabled()) {
+            backgroundMusic.stop();
+        } else {
+            playBackgroundMusic();
+        }
+    }
+
     public void stopStarSound() {
         starSound.stop();
     }

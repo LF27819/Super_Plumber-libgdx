@@ -11,11 +11,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.svalero.Super_Plumber.Super_Plumber;
 import com.svalero.Super_Plumber.manager.*;
 import com.svalero.Super_Plumber.util.Constants;
+import com.svalero.Super_Plumber.manager.AudioManager;
 
 public class GameScreen implements Screen {
 
     private static final int INITIAL_LIVES = 3;
-    private static final int MAX_PAUSE_OPTION = 2;
+    private static final int MAX_PAUSE_OPTION = 5;
 
     private final Super_Plumber game;
 
@@ -133,9 +134,7 @@ public class GameScreen implements Screen {
     }
 
     private void executePauseOption() {
-
         switch (selectedPauseOption) {
-
             case 0:
                 paused = false;
                 break;
@@ -146,7 +145,23 @@ public class GameScreen implements Screen {
                 break;
 
             case 2:
+                ConfigurationManager.toggleMusic();
+
+                if (audioManager != null) {
+                    audioManager.applyConfiguration();
+                }
+                break;
+
+            case 3:
+                ConfigurationManager.toggleSound();
+                break;
+
+            case 4:
                 game.setScreen(new MainMenuScreen(game));
+                break;
+
+            case 5:
+                Gdx.app.exit();
                 break;
         }
     }
@@ -216,11 +231,9 @@ public class GameScreen implements Screen {
     private void drawPauseMenu() {
         float cameraX = cameraManager.getCamera().position.x;
         float cameraY = cameraManager.getCamera().position.y;
-        float cameraWidth = cameraManager.getCamera().viewportWidth;
-        float cameraHeight = cameraManager.getCamera().viewportHeight;
 
-        float panelWidth = 420;
-        float panelHeight = 280;
+        float panelWidth = 540;
+        float panelHeight = 390;
         float panelX = cameraX - panelWidth / 2;
         float panelY = cameraY - panelHeight / 2;
 
@@ -231,16 +244,23 @@ public class GameScreen implements Screen {
         batch.draw(coinHudTexture, panelX, panelY, panelWidth, panelHeight);
         batch.setColor(Color.WHITE);
 
-        float titleY = cameraY + 100;
-        float firstY = cameraY + 40;
-        float spacing = 45;
+        float titleY = cameraY + 155;
+        float firstY = cameraY + 95;
+        float spacing = 43;
 
         drawPauseOption("PAUSA", cameraX - 75, titleY, false);
-        drawPauseOption("CONTINUAR", cameraX - 120, firstY, selectedPauseOption == 0);
-        drawPauseOption("REINICIAR NIVEL", cameraX - 180, firstY - spacing, selectedPauseOption == 1);
-        drawPauseOption("VOLVER AL MENU", cameraX - 170, firstY - spacing * 3, selectedPauseOption == 2);
+        drawPauseOption("CONTINUAR", cameraX - 135, firstY, selectedPauseOption == 0);
+        drawPauseOption("REINICIAR NIVEL", cameraX - 195, firstY - spacing, selectedPauseOption == 1);
+        drawPauseOption("MUSICA: " + onOff(ConfigurationManager.isMusicEnabled()), cameraX - 180, firstY - spacing * 2, selectedPauseOption == 2);
+        drawPauseOption("SONIDOS: " + onOff(ConfigurationManager.isSoundEnabled()), cameraX - 190, firstY - spacing * 3, selectedPauseOption == 3);
+        drawPauseOption("VOLVER AL MENU", cameraX - 190, firstY - spacing * 4, selectedPauseOption == 4);
+        drawPauseOption("SALIR DEL JUEGO", cameraX - 190, firstY - spacing * 5, selectedPauseOption == 5);
 
         batch.end();
+    }
+
+    private String onOff(boolean value) {
+        return value ? "ON" : "OFF";
     }
 
     private void drawPauseOption(String text, float x, float y, boolean selected) {
